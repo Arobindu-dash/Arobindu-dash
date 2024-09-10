@@ -1,4 +1,4 @@
-#******** STEP LIBERIA - ANALYSES
+#******** LIBERIA - ANALYSES
 
 library(psych)
 library(gmodels)
