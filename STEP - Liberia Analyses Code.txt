@@ -1,0 +1,500 @@
+#******** STEP LIBERIA - ANALYSES
+
+library(psych)
+library(gmodels)
+library(car)
+library(QuantPsyc)
+library(nlme)
+library(lme4)
+
+
+
+
+#*********************** GETTING DATA ***********************#
+
+#*** LAPTOP
+setwd("C:/Users/Arobindu/Academia/Research/Projects")
+setwd("C:/Users/AD/Google Drive/Academia/Research/Projects")
+
+l_t1quest=read.csv2("STEP/Studies/Liberia/2011/Data/csv/Liberia_t1_quest.csv", na.strings=c(999), header=TRUE)
+l_t2quest=read.csv2("STEP/Studies/Liberia/2011/Data/csv/Liberia_t2_quest.csv", na.strings=c(999), header=TRUE)
+l_t3quest=read.csv2("STEP/Studies/Liberia/2011/Data/csv/Liberia_t3_quest.csv", na.strings=c(999), header=TRUE)
+l_t4quest=read.csv2("STEP/Studies/Liberia/2011/Data/csv/Liberia_t4_quest.csv", na.strings=c(999), header=TRUE)
+l_t4int=read.csv2("STEP/Studies/Liberia/2011/Data/csv/Liberia_t4_int.csv", na.strings=c(999), header=TRUE)
+l_t4r1=read.csv2("STEP/Studies/Liberia/2011/Data/csv/Liberia_t4_r1.csv", na.strings=c(999), header=TRUE)
+l_t4r2=read.csv2("STEP/Studies/Liberia/2011/Data/csv/Liberia_t4_r2.csv", na.strings=c(999), header=TRUE)
+
+
+
+#*** MERGING DATA
+
+l2  <- merge(l_t1quest, l_t2quest, by="ID")
+l3  <- merge(l2, l_t3quest, by="ID")
+l4a <- merge(l_t4r1, l_t4r2, by="ID")
+l4b <- merge(l_t4quest, l_t4int, by="ID")
+l4c <- merge(l4a, l4b, by="ID")
+l4  <- merge(l3, l4c, by="ID")
+
+
+
+
+#*********************** SELECTING PARTICIPANTS ***********************#
+
+table(l4$train)
+describe(l4$train_a); table(l4$train_a)
+l4$train2 <- ifelse(l4$train_a == 0, 0, ifelse(l4$train_a <= 7, NA, 1))
+#l4$train2 <- l4$train
+table(l4$train2)
+
+table(l4$t1_quest); CrossTable(l4$t1_quest, l4$train)
+table(l4$t2_quest); CrossTable(l4$t2_quest, l4$train)
+table(l4$t3_quest); CrossTable(l4$t3_quest, l4$train)
+table(l4$t4_quest); CrossTable(l4$t4_quest, l4$train)
+
+
+
+
+#*********************** COMPUTING SCALES - T1 ***********************#
+
+#****** DEMOGRAPHIC VARIABLES
+describe(l4$fam_bus); table(l4$fam_bus)
+describe(l4$bus_course); table(l4$bus_course)
+describe(l4$t1_sex); table(l4$t1_sex); 145/198  # 0 = female, 1 = male
+
+l4$sex      <- l4$t1_sex
+l4$famown   <- l4$fam_bus
+l4$buscours <- l4$bus_course
+
+
+
+#****** EXPERIENCE
+
+describe(cbind(l4$t1_own_exp, l4$t1_empl, l4$t1_empl_exp))
+l4$entexp <- ifelse(l4$t1_own_exp == 1 | l4$t1_own == 1, 1, 0)
+
+
+
+#****** BUSINESS OWNER
+describe(l4$t1_own); table(l4$t1_own)
+describe(l4$t2_own); table(l4$t2_own)
+describe(l4$t3_own); table(l4$t3_own)
+describe(l4$t4_own); table(l4$t4_own)
+
+
+
+#*** EMPLOYEES ***#
+
+#*** EMPLOYESS_FT - T1
+describe(l4$t1_emp_f); table(l4$t1_emp_f)
+l4$t1_own_empf <- ifelse(l4$t1_quest == 1 & l4$t1_own >= 0, recode(l4$t1_emp_f, "NA=0"), NA)
+l4$t1_own_empf <- ifelse(l4$t1_own == 0, 0, l4$t1_own_empf)
+l4$t1_own_empf <- ifelse(l4$t1_own_empf >= 25, 25, l4$t1_own_empf)
+describe(l4$t1_own_empf); table(l4$t1_own_empf)
+
+#*** EMPLOYESS_FT - T2
+describe(l4$t2_emp_f); table(l4$t2_emp_f)
+l4$t2_own_empf <- ifelse(l4$t2_quest == 1 & l4$t2_own >= 0, recode(l4$t2_emp_f, "NA=0"), NA)
+l4$t2_own_empf <- ifelse(l4$t2_own == 0, 0, l4$t2_own_empf)
+l4$t2_own_empf <- ifelse(l4$t2_own_empf >= 25, 25, l4$t2_own_empf)
+describe(l4$t2_own_empf); table(l4$t2_own_empf)
+
+#*** EMPLOYESS_FT - T4
+describe(l4$t4_own_siz2_f); table(l4$t4_own_siz2_f)
+l4$t4_own_empf <- ifelse(l4$t4_quest == 1 & l4$t4_own >= 0, recode(l4$t4_own_siz2_f, "NA=0"), NA)
+l4$t4_own_empf <- ifelse(l4$t4_own == 0, 0, l4$t4_own_empf)
+l4$t4_own_empf <- ifelse(l4$t4_own_empf >= 25, 25, l4$t4_own_empf)
+describe(l4$t4_own_empf); table(l4$t4_own_empf)
+
+
+#*** EMPLOYESS_PT - T1
+describe(l4$t1_emp_p); table(l4$t1_emp_p)
+l4$t1_own_empp <- ifelse(l4$t1_quest == 1 & l4$t1_own >= 0, recode(l4$t1_emp_p, "NA=0"), NA)
+l4$t1_own_empp <- ifelse(l4$t1_own == 0, 0, l4$t1_own_empp)
+l4$t1_own_empp <- ifelse(l4$t1_own_empp >= 25, 25, l4$t1_own_empp)
+describe(l4$t1_own_empp); table(l4$t1_own_empp)
+
+#*** EMPLOYESS_PT - T2
+describe(l4$t2_emp_p); table(l4$t2_emp_p)
+l4$t2_own_empp <- ifelse(l4$t2_quest == 1 & l4$t2_own >= 0, recode(l4$t2_emp_p, "NA=0"), NA)
+l4$t2_own_empp <- ifelse(l4$t2_own == 0, 0, l4$t2_own_empp)
+l4$t2_own_empp <- ifelse(l4$t2_own_empp >= 25, 25, l4$t2_own_empp)
+describe(l4$t2_own_empp); table(l4$t2_own_empp)
+
+#*** EMPLOYESS_PT - T4
+describe(l4$t4_own_siz2_p); table(l4$t4_own_siz2_p)
+l4$t4_own_empp <- ifelse(l4$t4_quest == 1 & l4$t4_own >= 0, recode(l4$t4_own_siz2_p, "NA=0"), NA)
+l4$t4_own_empp <- ifelse(l4$t4_own == 0, 0, l4$t4_own_empp)
+l4$t4_own_empp <- ifelse(l4$t4_own_empp >= 25, 25, l4$t4_own_empp)
+describe(l4$t4_own_empp); table(l4$t4_own_empp)
+
+#*** ADDITIONAL EMPLOYESS - T4
+describe(cbind(l4$t4_7emp_full, l4$t4_7emp_part))
+l4$t4_7empf <- ifelse(l4$t4_quest == 1 & l4$t4_own >= 0, recode(l4$t4_7emp_full, "NA=0"), NA)
+l4$t4_7empf <- ifelse(l4$t4_7empf >= 25, 25, l4$t4_7empf)
+l4$t4_7empp <- ifelse(l4$t4_quest == 1 & l4$t4_own >= 0, recode(l4$t4_7emp_part, "NA=0"), NA)
+l4$t4_7empp <- ifelse(l4$t4_7empp >= 25, 25, l4$t4_7empp)
+
+describe(cbind(l4$t4_8emp_full, l4$t4_8emp_part))
+l4$t4_8empf <- ifelse(l4$t4_quest == 1 & l4$t4_own >= 0, recode(l4$t4_8emp_full, "NA=0"), NA)
+l4$t4_8empf <- ifelse(l4$t4_8empf >= 25, 25, l4$t4_8empf)
+l4$t4_8empp <- ifelse(l4$t4_quest == 1 & l4$t4_own >= 0, recode(l4$t4_8emp_part, "NA=0"), NA)
+l4$t4_8empp <- ifelse(l4$t4_8empp >= 25, 25, l4$t4_8empp)
+
+describe(l4$t4_7empf); table(l4$t4_7empf)
+describe(l4$t4_7empp); table(l4$t4_7empp)
+describe(l4$t4_8empf); table(l4$t4_8empf)
+describe(l4$t4_8empp); table(l4$t4_8empp)
+
+
+#*** EMPLOYEES TOTAL
+
+l4$t1_emp  <- l4$t1_own_empf + l4$t1_own_empp
+l4$t2_emp  <- l4$t2_own_empf + l4$t2_own_empp
+l4$t3_emp  <- ifelse(l4$t3_quest == 1 & l4$t3_own >= 0, recode(l4$t3_emp_t, "NA=0"), NA)
+l4$t3_emp  <- ifelse(l4$t3_own == 0, 0, l4$t3_emp)
+l4$t3_emp  <- ifelse(l4$t3_emp >= 25, 25, l4$t3_emp)
+l4$t4_emp  <- l4$t4_own_empf + l4$t4_own_empp +
+  l4$t4_7empf + l4$t4_7empp +
+  l4$t4_8empf + l4$t4_8empp
+#l4$t4_emp <- l4$t4_own_empf + l4$t4_own_empp
+#l4$t4_empa <- l4$t4_7empf + l4$t4_7empp +
+#  l4$t4_8empf + l4$t4_8empp
+
+describe(l4$t1_emp); table(l4$t1_emp)
+describe(l4$t2_emp); table(l4$t2_emp)
+describe(l4$t3_emp); table(l4$t3_emp)
+describe(l4$t4_emp); table(l4$t4_emp)
+
+
+
+
+#****** PROACTIVE ENTREPRENEURIAL BEHAVIOR
+
+#*** Opportunity Implementation
+
+# Entrepreneurial Action T1
+describe(cbind(l4$t1_ent_act1, l4$t1_ent_act2, l4$t1_ent_act3, l4$t1_ent_act4, l4$t1_ent_act5, l4$t1_ent_act6, l4$t1_ent_act7, l4$t1_ent_act8, l4$t1_ent_act9, l4$t1_ent_act10, l4$t1_ent_act11, l4$t1_ent_act12))
+alpha(data.frame(l4$t1_ent_act1, l4$t1_ent_act2, l4$t1_ent_act3, l4$t1_ent_act4, l4$t1_ent_act5, l4$t1_ent_act6, l4$t1_ent_act7, l4$t1_ent_act8, l4$t1_ent_act9, l4$t1_ent_act10, l4$t1_ent_act11, l4$t1_ent_act12))
+l4$t1_act <- apply(cbind(l4$t1_ent_act1, l4$t1_ent_act2, l4$t1_ent_act3, l4$t1_ent_act4, l4$t1_ent_act5, l4$t1_ent_act6, l4$t1_ent_act7, l4$t1_ent_act8, l4$t1_ent_act9, l4$t1_ent_act10, l4$t1_ent_act11, l4$t1_ent_act12), 1, mean, na.rm="T")
+l4$t1_act <- ifelse(l4$t1_int == 1 | l4$t1_ent == 1, l4$t1_act, 1)
+
+# Entrepreneurial Action T2
+describe(cbind(l4$t2_ent_act1, l4$t2_ent_act2, l4$t2_ent_act3, l4$t2_ent_act4, l4$t2_ent_act5, l4$t2_ent_act6, l4$t2_ent_act7, l4$t2_ent_act8, l4$t2_ent_act9, l4$t2_ent_act10, l4$t2_ent_act11, l4$t2_ent_act12))
+alpha(data.frame(l4$t2_ent_act1, l4$t2_ent_act2, l4$t2_ent_act3, l4$t2_ent_act4, l4$t2_ent_act5, l4$t2_ent_act6, l4$t2_ent_act7, l4$t2_ent_act8, l4$t2_ent_act9, l4$t2_ent_act10, l4$t2_ent_act11, l4$t2_ent_act12))
+l4$t2_act <- apply(cbind(l4$t2_ent_act1, l4$t2_ent_act2, l4$t2_ent_act3, l4$t2_ent_act4, l4$t2_ent_act5, l4$t2_ent_act6, l4$t2_ent_act7, l4$t2_ent_act8, l4$t2_ent_act9, l4$t2_ent_act10, l4$t2_ent_act11, l4$t2_ent_act12), 1, mean, na.rm="T")
+l4$t2_act <- ifelse(l4$t2_int == 1 | l4$t2_ent == 1, l4$t2_act, 1)
+
+
+# ENTREPRENEURIAL ACTION - T3
+describe(l4$t3_ent)
+l4$t3_act <- l4$t3_ent
+
+# ENTREPRENEURIAL ACTION - T4
+l4$t4_r1_entd  <- apply(cbind(l4$t4_r1_entd01, l4$t4_r1_entd02, l4$t4_r1_entd03, l4$t4_r1_entd04, l4$t4_r1_entd05, l4$t4_r1_entd06, l4$t4_r1_entd07, l4$t4_r1_entd08, l4$t4_r1_entd09, l4$t4_r1_entd10, l4$t4_r1_entd11, l4$t4_r1_entd12, l4$t4_r1_entd13, l4$t4_r1_entd14, l4$t4_r1_entd15, l4$t4_r1_entd16, l4$t4_r1_entd17, l4$t4_r1_entd18, l4$t4_r1_entd19, l4$t4_r1_entd20, l4$t4_r1_entd21, l4$t4_r1_entd22, l4$t4_r1_entd23, l4$t4_r1_entd24, l4$t4_r1_entd25, l4$t4_r1_entd26, l4$t4_r1_entd27, l4$t4_r1_entd28, l4$t4_r1_entd29, l4$t4_r1_entd30, l4$t4_r1_entd31, l4$t4_r1_entd32, l4$t4_r1_entd33, l4$t4_r1_entd34, l4$t4_r1_entd35), 1, mean, na.rm="T")
+l4$t4_r2_entd  <- apply(cbind(l4$t4_r2_entd01, l4$t4_r2_entd02, l4$t4_r2_entd03, l4$t4_r2_entd04, l4$t4_r2_entd05, l4$t4_r2_entd06, l4$t4_r2_entd07, l4$t4_r2_entd08, l4$t4_r2_entd09, l4$t4_r2_entd10, l4$t4_r2_entd11, l4$t4_r2_entd12, l4$t4_r2_entd13, l4$t4_r2_entd14, l4$t4_r2_entd15, l4$t4_r2_entd16, l4$t4_r2_entd17, l4$t4_r2_entd18, l4$t4_r2_entd19, l4$t4_r2_entd20, l4$t4_r2_entd21, l4$t4_r2_entd22, l4$t4_r2_entd23, l4$t4_r2_entd24, l4$t4_r2_entd25, l4$t4_r2_entd26, l4$t4_r2_entd27, l4$t4_r2_entd28, l4$t4_r2_entd29, l4$t4_r2_entd30, l4$t4_r2_entd31, l4$t4_r2_entd32, l4$t4_r2_entd33, l4$t4_r2_entd34, l4$t4_r2_entd35), 1, mean, na.rm="T")
+l4$t4_entd     <- (apply(cbind(l4$t4_r1_entd, l4$t4_r2_entd), 1, mean, na.rm="T") * 35)
+
+l4$t4_r1_intd  <- apply(cbind(l4$t4_r1_intd01, l4$t4_r1_intd02, l4$t4_r1_intd03, l4$t4_r1_intd04, l4$t4_r1_intd05, l4$t4_r1_intd06, l4$t4_r1_intd07, l4$t4_r1_intd08, l4$t4_r1_intd09, l4$t4_r1_intd10, l4$t4_r1_intd11, l4$t4_r1_intd12, l4$t4_r1_intd13, l4$t4_r1_intd14, l4$t4_r1_intd15, l4$t4_r1_intd16, l4$t4_r1_intd17, l4$t4_r1_intd18, l4$t4_r1_intd19, l4$t4_r1_intd20, l4$t4_r1_intd21, l4$t4_r1_intd22, l4$t4_r1_intd23, l4$t4_r1_intd24, l4$t4_r1_intd25, l4$t4_r1_intd26, l4$t4_r1_intd27, l4$t4_r1_intd28, l4$t4_r1_intd29, l4$t4_r1_intd30, l4$t4_r1_intd31, l4$t4_r1_intd32, l4$t4_r1_intd33, l4$t4_r1_intd34, l4$t4_r1_intd35), 1, mean, na.rm="T")
+l4$t4_r2_intd  <- apply(cbind(l4$t4_r2_intd01, l4$t4_r2_intd02, l4$t4_r2_intd03, l4$t4_r2_intd04, l4$t4_r2_intd05, l4$t4_r2_intd06, l4$t4_r2_intd07, l4$t4_r2_intd08, l4$t4_r2_intd09, l4$t4_r2_intd10, l4$t4_r2_intd11, l4$t4_r2_intd12, l4$t4_r2_intd13, l4$t4_r2_intd14, l4$t4_r2_intd15, l4$t4_r2_intd16, l4$t4_r2_intd17, l4$t4_r2_intd18, l4$t4_r2_intd19, l4$t4_r2_intd20, l4$t4_r2_intd21, l4$t4_r2_intd22, l4$t4_r2_intd23, l4$t4_r2_intd24, l4$t4_r2_intd25, l4$t4_r2_intd26, l4$t4_r2_intd27, l4$t4_r2_intd28, l4$t4_r2_intd29, l4$t4_r2_intd30, l4$t4_r2_intd31, l4$t4_r2_intd32, l4$t4_r2_intd33, l4$t4_r2_intd34, l4$t4_r2_intd35), 1, mean, na.rm="T")
+l4$t4_intd     <- (apply(cbind(l4$t4_r1_intd, l4$t4_r2_intd), 1, mean, na.rm="T") * 35)
+
+l4$t4_act <- l4$t4_entd + l4$t4_intd
+
+
+
+
+#*********************** RANDOMIZATION CHECK ***********************#
+
+t.test(l4$fam_bus~l4$train)
+t.test(l4$bus_course~l4$train)
+t.test(l4$sex~l4$train)
+t.test(l4$t1_own~l4$train)
+t.test(l4$t1_emp~l4$train)
+t.test(l4$t1_act~l4$train)
+
+
+
+
+#*********************** DROP-OUT ***********************#
+
+t.test(l4$fam_bus~l4$t2_quest)
+t.test(l4$bus_course~l4$t2_quest)
+t.test(l4$sex~l4$t2_quest)
+t.test(l4$t1_own~l4$t2_quest)
+t.test(l4$t1_emp~l4$t2_quest)
+t.test(l4$t1_act~l4$t2_quest)
+
+t.test(l4$fam_bus~l4$t3_quest)
+t.test(l4$bus_course~l4$t3_quest)
+t.test(l4$sex~l4$t3_quest)     # drop-out: more male
+t.test(l4$t1_own~l4$t3_quest)
+t.test(l4$t1_emp~l4$t3_quest)
+t.test(l4$t1_act~l4$t3_quest)
+
+t.test(l4$fam_bus~l4$t4_quest)    # drop-out: less fam_bus
+t.test(l4$bus_course~l4$t4_quest)
+t.test(l4$t1_sex~l4$t4_quest)
+t.test(l4$t1_own~l4$t4_quest)
+t.test(l4$t1_emp~l4$t4_quest)
+t.test(l4$t1_act~l4$t4_quest)
+
+
+
+
+#********************** FINAL SAMPLE **********************#
+
+l4$quest <- l4$t1_quest + l4$t2_quest + l4$t3_quest + l4$t4_quest
+table(l4$quest)
+
+l4sub <- subset(l4, l4$quest >= 3 & l4$train2 >= 0)
+#l4sub <- subset(l4, l4$quest >= 3)
+describe(l4sub$train2); table(l4sub$train2)
+table(l4sub$quest); 3*51+4*100; 553/151
+
+
+#********************** DESCRIPTIVE STATISTICS **********************#
+
+describe(cbind(l4sub$train2, l4sub$t1_act, l4sub$t2_act, l4sub$t1_own, l4sub$t2_own, l4sub$t3_own, l4sub$t4_own, l4sub$t1_emp, l4sub$t2_emp, l4sub$t3_emp, l4sub$t4_emp, l4sub$sex, l4sub$famown, l4sub$bus_course))
+corr.test(data.frame(l4sub$train2, l4sub$t1_act, l4sub$t2_act, l4sub$t1_own, l4sub$t2_own, l4sub$t3_own, l4sub$t4_own, l4sub$t1_emp, l4sub$t2_emp, l4sub$t3_emp, l4sub$t4_emp, l4sub$sex, l4sub$famown, l4sub$bus_course))
+
+
+#********************** HYPOTHESIS TESTING **********************#
+
+#*** Mean values across time
+
+#tapply(l4sub$t1_act, l4sub$train2, mean, na.rm=T)
+#tapply(l4sub$t2_act, l4sub$train2, mean, na.rm=T)
+#tapply(l4sub$t4_act, l4sub$train2, mean, na.rm=T)
+
+tapply(l4sub$t1_own, l4sub$train2, mean, na.rm=T)
+tapply(l4sub$t2_own, l4sub$train2, mean, na.rm=T)
+tapply(l4sub$t3_own, l4sub$train2, mean, na.rm=T)
+tapply(l4sub$t4_own, l4sub$train2, mean, na.rm=T)
+
+tapply(l4sub$t1_emp, l4sub$train2, mean, na.rm=T)
+tapply(l4sub$t2_emp, l4sub$train2, mean, na.rm=T)
+tapply(l4sub$t3_emp, l4sub$train2, mean, na.rm=T)
+tapply(l4sub$t4_emp, l4sub$train2, mean, na.rm=T)
+#tapply(l4sub$t4_emp1, l4sub$train2, mean, na.rm=T)
+#tapply(l4sub$t4_empa, l4sub$train2, mean, na.rm=T)
+
+
+#******* Linear Models
+
+tapply(l4sub$t1_egi, l4sub$train2, sd, na.rm=T)
+tapply(l4sub$t2_egi, l4sub$train2, sd, na.rm=T)
+tapply(l4sub$t1_pla, l4sub$train2, sd, na.rm=T)
+tapply(l4sub$t2_pla, l4sub$train2, sd, na.rm=T)
+tapply(l4sub$t1_act, l4sub$train2, sd, na.rm=T)
+tapply(l4sub$t2_act, l4sub$train2, sd, na.rm=T)
+
+
+#Model1 <- lm(t2_egi~sex+famown+bus_course+t1_egi+train2, data=l4sub)
+#summary(Model1)
+#Model1 <- lm(t2_pla~sex+famown+bus_course+t1_pla+train2, data=l4sub)
+#summary(Model1)
+#Model1 <- lm(t2_opp~sex+famown+bus_course+t1_opp+train2, data=l4sub)
+#summary(Model1)
+
+
+Model1 <- lm(t2_act~sex+famown+bus_course+t1_act+train2, data=l4sub)
+summary(Model1)
+#Model1 <- lm(t3_act~sex+famown+bus_course+t1_act+train2, data=l4sub)
+#summary(Model1)
+#Model1 <- lm(t4_act~sex+famown+bus_course+t1_act+train2, data=l4sub)
+#summary(Model1)
+#Model1 <- lm(t4_act~sex+famown+bus_course+t1_act+train2+t2_act, data=l4sub)
+#summary(Model1)
+
+Model1 <- glm(t3_own~sex+famown+bus_course+t1_own+train2, family=binomial, data=l4sub)
+summary(Model1) # sig
+PseudoR2(Model1, c("McFadden", "CoxSnell", "Nagelkerke", "Tjur")) # Nagelkerke
+Model1 <- glm(t3_own~sex+famown+bus_course+t1_own+train2+t2_act, family=binomial, data=l4sub)
+summary(Model1) # sig
+PseudoR2(Model1, c("McFadden", "CoxSnell", "Nagelkerke", "Tjur")) # Nagelkerke
+#Model1 <- glm(t4_own~sex+famown+bus_course+t1_own+train2, family=binomial, data=l4sub)
+#summary(Model1) # ns
+Model1 <- glm(t4_own~sex+famown+bus_course+t1_own+train2+t2_act+t3_own, family=binomial, data=l4sub)
+summary(Model1)
+PseudoR2(Model1, c("McFadden", "CoxSnell", "Nagelkerke", "Tjur")) # Nagelkerke
+
+#Model1 <- lm(t3_emp~sex+famown+bus_course+t1_emp+train2, data=l4sub)
+#summary(Model1) # sig
+#Model1 <- lm(t4_emp~sex+famown+bus_course+t1_emp+train2, data=l4sub)
+#summary(Model1) # ns
+#Model1 <- lm(t3_emp~sex+famown+bus_course+t1_emp+train2+t2_act, data=l4sub)
+#summary(Model1) # sig
+#Model1 <- lm(t4_emp~sex+famown+bus_course+t1_emp+train2+t2_act, data=l4sub)
+#summary(Model1)
+Model1 <- lm(t4_emp~sex+famown+bus_course+t1_emp+train2+t2_act+t3_own, data=l4sub)
+summary(Model1)
+Model1 <- lm(t4_emp~sex+famown+bus_course+t1_emp+train2+t2_act+t3_own+t4_own, data=l4sub)
+summary(Model1)
+
+
+
+#*** Sequential mediation analysis
+
+#* Train -> ACT -> Own -> Emp
+a  <- 0.48113
+sa <- 0.18606^2
+
+b  <- 0.59207
+sb <- 0.26459^2
+
+c  <- 0.91793
+sc <- 0.44977^2
+
+round(a*b*c, 3) 
+
+rep=20000
+conf1=95
+conf2=99
+pest=c(a,b,c)
+acov <- matrix(c(
+  sa, 0, 0,
+  0, sb, 0,
+  0, 0, sc
+),3,3)
+mcmc <- mvrnorm(rep,pest,acov,empirical=FALSE)
+efd <- mcmc[,1]*mcmc[,2]*mcmc[,3]
+low1=(1-conf1/100)/2
+upp1=((1-conf1/100)/2)+(conf1/100)
+LL1=quantile(efd,low1)
+UL1=quantile(efd,upp1)
+low2=(1-conf2/100)/2
+upp2=((1-conf2/100)/2)+(conf2/100)
+LL2=quantile(efd,low2)
+UL2=quantile(efd,upp2)
+print(LL1); print(UL1)
+print(LL2); print(UL2)
+
+
+
+#* Train -> ACT -> Own -> Own -> Emp
+a  <- 0.48113
+sa <- 0.18606^2
+
+b  <- 0.59207
+sb <- 0.26459^2
+
+c  <- 2.1578
+sc <- 0.6170^2
+
+d  <- 1.48751
+sd <- 0.49982^2
+
+round(a*b*c*d, 4) 
+
+rep=20000
+conf1=95
+conf2=96.3
+pest=c(a,b,c,d)
+acov <- matrix(c(
+  sa, 0, 0, 0,
+  0, sb, 0, 0,
+  0, 0, sc, 0,
+  0, 0, 0, sd
+),4,4)
+mcmc <- mvrnorm(rep,pest,acov,empirical=FALSE)
+abcd <- mcmc[,1]*mcmc[,2]*mcmc[,3]*mcmc[,4]
+low1=(1-conf1/100)/2
+upp1=((1-conf1/100)/2)+(conf1/100)
+LL1=quantile(abcd,low1)
+UL1=quantile(abcd,upp1)
+low2=(1-conf2/100)/2
+upp2=((1-conf2/100)/2)+(conf2/100)
+LL2=quantile(abcd,low2)
+UL2=quantile(abcd,upp2)
+print(LL1); print(UL1)
+print(LL2); print(UL2)
+
+
+
+
+
+
+#*** Growth-curve modeling
+
+l4s <- subset(l4sub, select=c(ID, sex, fam_bus, bus_course, train2, t1_own, t2_own, t3_own, t4_own, t1_emp, t2_emp, t3_emp, t4_emp))
+l4l <- reshape(l4s, idvar="ID", direction="long", 
+               varying=list(c("t1_own", "t2_own", "t3_own", "t4_own"),
+                            c("t1_emp", "t2_emp", "t3_emp", "t4_emp")
+                            ),
+               v.names=c("own", "emp"), times=1:4)
+l4l <- na.omit(l4l)
+
+
+#**** Randomization Check
+
+l4ls <- subset(l4l, l4l$time == 1)
+t.test(l4ls$sex~l4ls$train2)
+t.test(l4ls$fam_bus~l4ls$train2)
+t.test(l4ls$bus_course~l4ls$train2)
+t.test(l4ls$own~l4ls$train2)
+t.test(l4ls$emp~l4ls$train2)
+
+l4la <- aggregate(l4l, by=list(l4l$ID), mean)
+table(l4la$train2)
+length(l4l$ID)
+
+
+
+#**** Multi-Level Analyses
+
+tapply(l4l$own, l4l$time, mean)
+tapply(l4l$emp, l4l$time, mean)
+tapply(l4l$own, list(l4l$time, l4l$train2), mean)
+tapply(l4l$emp, list(l4l$time, l4l$train2), mean)
+
+l4l$time_c   <- meanCenter(l4l$time)
+l4l$time2_c  <- meanCenter(l4l$time_c * l4l$time_c)
+l4l$train_c  <- meanCenter(l4l$train2)
+
+ctrl1 <- lmeControl(opt='optim')
+ctrl2 <- glmerControl(optimizer='bobyqa')
+
+M0a <- glmer(own~time_c+time2_c + (1|ID), family=binomial, control=ctrl2, data=l4l)
+summary(M0a)
+M0b <- glmer(own~time_c+time2_c + (time_c+time2_c|ID), family=binomial, control=ctrl2, data=l4l)
+summary(M0b)
+anova(M0a, M0b)
+
+M0c <- lme(emp~time_c+time2_c, random=~1 | ID, control=ctrl1, data=l4l)
+summary(M0c)
+M0d <- lme(emp~time_c+time2_c, random=~time_c+time2_c | ID, control=ctrl1, data=l4l)
+summary(M0d)
+anova(M0c, M0d)
+
+
+M1a <- glmer(own~sex+fam_bus+bus_course+time2_c+time_c + (time_c+time2_c|ID), family=binomial, control=ctrl2, data=l4l)
+summary(M1a)
+logLik(M1a) * -2
+M1b <- glmer(own~sex+fam_bus+bus_course+time2_c+time_c*train_c + (time_c+time2_c|ID), family=binomial, control=ctrl2, data=l4l)
+summary(M1b)
+logLik(M1b) * -2
+
+M2a <- lme(emp~sex+fam_bus+bus_course+time2_c+time_c, random=~time_c+time2_c | ID, control=ctrl1, data=l4l)
+summary(M2a)
+logLik(M2a) * -2
+M2b <- lme(emp~sex+fam_bus+bus_course+time2_c+time_c*train_c, random=~time_c+time2_c | ID, control=ctrl1, data=l4l)
+summary(M2b)
+logLik(M2b) * -2
+
+
+#M1a <- glmer(own~t1_sex+fam_bus+bus_course+time_c + (time_c|ID), family=binomial, control=ctrl2, data=l4l)
+#summary(M1a)
+#logLik(M1a) * -2
+#M1b <- glmer(own~t1_sex+fam_bus+bus_course+time_c*train_c + (time_c|ID), family=binomial, control=ctrl2, data=l4l)
+#summary(M1b)
+#logLik(M1b) * -2
+
+#M2a <- lme(emp~t1_sex+fam_bus+bus_course+time_c, random=~time_c+time2_c | ID, control=ctrl1, data=l4l)
+#summary(M2a)
+#logLik(M2a) * -2
+#M2b <- lme(emp~t1_sex+fam_bus+bus_course+time_c*train_c, random=~time_c | ID, control=ctrl1, data=l4l)
+#summary(M2b)
+#logLik(M2b) * -2
+
+
+
